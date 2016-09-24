@@ -3,8 +3,8 @@
 var validator = require('validator');
 var nconf = require('nconf');
 var winston = require('winston');
-
 var db = require('../database');
+var UserDb = require('../database/userdb');
 var plugins = require('../plugins');
 
 module.exports = function(User) {
@@ -148,7 +148,10 @@ module.exports = function(User) {
 				return callback(err);
 			}
 			plugins.fireHook('action:user.set', {uid: uid, field: field, value: value, type: 'set'});
-			callback();
+
+			var updates = {};
+			updates[field] = value;
+			UserDb.updateFields(uid, updates, callback);
 		});
 	};
 
@@ -163,7 +166,8 @@ module.exports = function(User) {
 					plugins.fireHook('action:user.set', {uid: uid, field: field, value: data[field], type: 'set'});
 				}
 			}
-			callback();
+
+			UserDb.updateFields(uid, data, callback);
 		});
 	};
 

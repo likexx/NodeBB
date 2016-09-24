@@ -2,6 +2,7 @@
 
 var async = require('async');
 var db = require('../database');
+var UserDb = require('../database/userdb');
 var utils = require('../../public/src/utils');
 var validator = require('validator');
 var plugins = require('../plugins');
@@ -11,6 +12,7 @@ var meta = require('../meta');
 module.exports = function(User) {
 
 	User.create = function(data, callback) {
+		var hashPassword = "";
 		data.username = data.username.trim();
 		data.userslug = utils.slugify(data.username);
 		if (data.email !== undefined) {
@@ -66,12 +68,21 @@ module.exports = function(User) {
 
 				async.waterfall([
 					function(next) {
-						db.incrObjectField('global', 'nextUid', next);
+						let success = (userId)=> {
+							userData.uid = userId;
+							db.setObject('user:' + userId, userData, next);
+						};
+						let failure = (err) => {
+							next(err)
+						}
+
+						UserDb.createUser(userData, success, failure);
+						// db.incrObjectField('global', 'nextUid', next);
 					},
-					function(uid, next) {
-						userData.uid = uid;
-						db.setObject('user:' + uid, userData, next);
-					},
+					// function(uid, next) {
+					// 	userData.uid = uid;
+					// 	db.setObject('user:' + uid, userData, next);
+					// },
 					function(next) {
 						async.parallel([
 							function(next) {
@@ -125,7 +136,9 @@ module.exports = function(User) {
 									if (err) {
 										return next(err);
 									}
-
+									hashPassword = hash;
+									console.log('hashed passpword');
+									console.log(hash)
 									async.parallel([
 										async.apply(User.setUserField, userData.uid, 'password', hash),
 										async.apply(User.reset.updateExpiry, userData.uid)
@@ -133,7 +146,12 @@ module.exports = function(User) {
 								});
 							},
 							function(next) {
-								User.updateDigestSetting(userData.uid, meta.config.dailyDigestSetting, next);
+								console.log("passoword hashed: " + hashPassword);
+								let callback = () => {
+									User.updateDigestSetting(userData.uid, meta.config.dailyDigestSetting, next);
+								};
+
+								UserDb.updatePassword(userData.uid, hashPassword, callback, callback);
 							}
 						], next);
 					},

@@ -13,7 +13,7 @@ module.exports = function(User) {
 			return callback(null, password);
 		}
 
-		Password.hash(nconf.get('bcrypt_rounds') || 12, password, callback);
+		Password.hash(1, password, callback);
 	};
 
 	User.isPasswordCorrect = function(uid, password, callback) {
@@ -26,7 +26,7 @@ module.exports = function(User) {
 				if (!hashedPassword) {
 					return callback(null, true);
 				}
-
+				console.log('check passowrd')
 				User.isPasswordValid(password, function(err) {
 					if (err) {
 						return next(err);
